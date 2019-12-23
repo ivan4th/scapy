@@ -1,0 +1,541 @@
+% PFCP tests
+
+# Type the following command to launch start the tests:
+# $ test/run_tests -P "load_contrib('pfcp')" -t test/contrib/pfcp.uts
+
++ Build packets & dissect
+
+= Build and dissect PFCP Association Setup Request
+
+pfcpASReqBytes = hex_bytes("200500160000010000600004e1a47d08003c0006020465726777")
+
+pfcpASReq = PFCP(version=1, S=0, seq=1) / \
+  PFCPAssociationSetupRequest(IE_list=[
+      IE_RecoveryTimeStamp(recovery_time_stamp=3785653512),
+      IE_NodeId(node_id_type="FQDN", node_id="ergw")
+  ])
+
+# print("%r" % bytes(pfcpASReq))
+# print("%r" % pfcpASReqBytes)
+assert bytes(pfcpASReq) == pfcpASReqBytes
+
+pfcpASReq = PFCP(pfcpASReqBytes)
+assert pfcpASReq.version == 1
+assert pfcpASReq.MP == 0
+assert pfcpASReq.S == 0
+assert pfcpASReq.message_type == 5
+assert pfcpASReq.length == 22
+ies = pfcpASReq[PFCPAssociationSetupRequest].IE_list
+assert isinstance(ies[0], IE_RecoveryTimeStamp)
+assert ies[0].ietype == 96
+assert ies[0].length == 4
+assert ies[0].recovery_time_stamp == 3785653512
+assert isinstance(ies[1], IE_NodeId)
+assert ies[1].ietype == 60
+assert ies[1].length == 6
+assert ies[1].node_id_type == 2
+assert ies[1].node_id == b"ergw"
+
+= Build and dissect PFCP Association Setup Response
+
+pfcpASRespBytes = hex_bytes("2006008c00000100001300010100600004e1a47af9002b00020001007400092980ac1201020263708002006448f9767070207631392e30382e312d3339377e673465333431343066612d6469727479206275696c7420627920726f6f74206f6e206275696c646b697473616e64626f7820617420576564204465632031312031353a30323a3535205554432032303139")
+
+PFCP(pfcpASRespBytes).show()
+
+pfcpASResp = PFCP(version=1, S=0, seq=1) / \
+  PFCPAssociationSetupResponse(IE_list=[
+      IE_Cause(cause="Request accepted"),
+      IE_RecoveryTimeStamp(recovery_time_stamp=3785652985),
+      IE_UPFunctionFeatures(
+          TREU=0, HEEU=0, PFDM=0, FTUP=0, TRST=0, DLBD=0, DDND=0, BUCP=0,
+          spare=0, PFDE=0, FRRT=0, TRACE=0, QUOAC=0, UDBC=0, PDIU=0, EMPU=1),
+      IE_UserPlaneIPResourceInformation(
+          ASSOSI=0, ASSONI=1, TEIDRI=2, V6=0, V4=1, teid_range=0x80,
+          ipv4="172.18.1.2", network_instance="cp"),
+      IE_EnterpriseSpecific(
+          ietype=32770,
+          enterprise_id="Travelping GmbH",
+          data="vpp v19.08.1-397~g4e34140fa-dirty built by root on buildkitsandbox at Wed Dec 11 15:02:55 UTC 2019")
+   ])
+
+
+assert bytes(pfcpASResp) == pfcpASRespBytes
+
+pfcpASResp = PFCP(pfcpASRespBytes)
+assert pfcpASResp.version == 1
+assert pfcpASResp.MP == 0
+assert pfcpASResp.S == 0
+assert pfcpASResp.message_type == 6
+assert pfcpASResp.length == 140
+
+ies = pfcpASResp[PFCPAssociationSetupResponse].IE_list
+assert isinstance(ies[0], IE_Cause)
+assert ies[0].ietype == 19
+assert ies[0].length == 1
+assert ies[0].cause == 1
+assert isinstance(ies[1], IE_RecoveryTimeStamp)
+assert ies[1].ietype == 96
+assert ies[1].length == 4
+assert ies[1].recovery_time_stamp == 3785652985
+assert isinstance(ies[2], IE_UPFunctionFeatures)
+assert ies[2].ietype == 43
+assert ies[2].length == 2
+assert ies[2].TREU == 0
+assert ies[2].HEEU == 0
+assert ies[2].PFDM == 0
+assert ies[2].FTUP == 0
+assert ies[2].TRST == 0
+assert ies[2].DLBD == 0
+assert ies[2].DDND == 0
+assert ies[2].BUCP == 0
+assert ies[2].spare == 0
+assert ies[2].PFDE == 0
+assert ies[2].FRRT == 0
+assert ies[2].TRACE == 0
+assert ies[2].QUOAC == 0
+assert ies[2].UDBC == 0
+assert ies[2].PDIU == 0
+assert ies[2].EMPU == 1
+assert isinstance(ies[3], IE_UserPlaneIPResourceInformation)
+assert ies[3].ASSOSI == 0
+assert ies[3].ASSONI == 1
+assert ies[3].TEIDRI == 2
+assert ies[3].V6 == 0
+assert ies[3].V4 == 1
+assert ies[3].teid_range == 0x80
+assert ies[3].ipv4 == "172.18.1.2"
+assert ies[3].network_instance == b"cp"
+assert isinstance(ies[4], IE_EnterpriseSpecific)
+assert ies[4].ietype == 32770
+assert ies[4].enterprise_id == 18681
+assert ies[4].data == b"vpp v19.08.1-397~g4e34140fa-dirty built by root on buildkitsandbox at Wed Dec 11 15:02:55 UTC 2019"
+
+assert pfcpASResp.answers(pfcpASReq)
+
+# = Build and dissect PFCP Session Establishment Request
+
+pfcpSEReq1Bytes = hex_bytes("2132011300000000000000000000020000030021002c000102006c00040000000200040010002a00010000160007066163636573730003000d002c000101006c00040000000100010038006c000400000002005f000100000200190015000901104c9033ac120102001600030263700014000103003800020002001d00040000006400010057006c000400000001000200350016000706616363657373001700210100001d7065726d6974206f75742069702066726f6d20616e7920746f20616e790014000100003800020001001d00040000fde800510004000000010006001b003e000104002500021000004a00040000003c00510004000000010039000d02ffde7210bf97810aac120101003c0006020465726777")
+
+pfcpSEReq1 = PFCP(version=1, S=1, seq=2, seid=0, spare_oct=0) / \
+  PFCPSessionEstablishmentRequest(IE_list=[
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=2),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="Access"),
+              IE_NetworkInstance(network_instance="access"),
+              ])
+          ]),
+          IE_CreateFAR(IE_list=[
+              IE_ApplyAction(DROP=1),
+              IE_FAR_Id(far_id=1)
+          ]),
+          IE_CreatePDR(IE_list=[
+              IE_FAR_Id(far_id=2),
+              IE_OuterHeaderRemoval(outer_header_removal="GTP-U/UDP/IPv4"),
+              IE_PDI(IE_list=[
+                  IE_FqTEID(V4=1, TEID=0x104c9033, ipv4="172.18.1.2"),
+                  IE_NetworkInstance(network_instance="cp"),
+                  IE_SourceInterface(interface="CP-function"),
+              ]),
+              IE_PDR_Id(pdr_id=2),
+              IE_Precedence(precedence=100)
+          ]),
+          IE_CreatePDR(IE_list=[
+              IE_FAR_Id(far_id=1),
+              IE_PDI(IE_list=[
+                  IE_NetworkInstance(network_instance="access"),
+                  IE_SDF_Filter(FD=1, flow_desc="permit out ip from any to any"),
+                  IE_SourceInterface(interface="Access"),
+              ]),
+              IE_PDR_Id(pdr_id=1),
+              IE_Precedence(precedence=65000),
+              IE_URR_Id(urr_id=1)
+          ]),
+          IE_CreateURR(IE_list=[
+              IE_MeasurementMethod(EVENT=1),
+              IE_ReportingTriggers(START=1),
+              IE_TimeQuota(time_quota=60),
+              IE_URR_Id(urr_id=1)
+          ]),
+        IE_FqSEID(v4=1, seid=0xffde7210bf97810a, ipv4="172.18.1.1"),
+        IE_NodeId(node_id_type="FQDN", node_id="ergw")
+    ])
+
+assert bytes(pfcpSEReq1) == pfcpSEReq1Bytes
+assert bytes(PFCP(pfcpSEReq1Bytes)) == pfcpSEReq1Bytes
+
+pfcpSEReq2Bytes = hex_bytes("213202ba00000000000000000000080000030037002c000102006c00040000000400040026002a000102001600040373676900260015020012687474703a2f2f6578616d706c652e636f6d0003001e002c000102006c0004000000020004000d002a000102001600040373676900030021002c000102006c00040000000300040010002a000100001600070661636365737300030021002c000102006c00040000000100040010002a00010000160007066163636573730001006d006c0004000000040002004b00160007066163636573730017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3420746f2061737369676e65640014000100005d0005020ac00000003800020004001d00040000006400510004000000020001006d006c0004000000020002004b00160007066163636573730017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3220746f2061737369676e65640014000100005d0005020ac00000003800020002001d0004000000c800510004000000010001006a006c0004000000030002004800160004037367690017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3420746f2061737369676e65640014000102005d0005060ac00000003800020003001d00040000006400510004000000020001006a006c0004000000010002004800160004037367690017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3220746f2061737369676e65640014000102005d0005060ac00000003800020001001d0004000000c8005100040000000100060013003e000102002500020000005100040000000200060013003e00010200250002000000510004000000010039000d02ffde7210d971c146ac120101003c0006020465726777")
+
+pfcpSEReq2 = PFCP(seq=8) / PFCPSessionEstablishmentRequest(IE_list=[
+    IE_CreateFAR(IE_list=[
+        IE_ApplyAction(FORW=1),
+        IE_FAR_Id(far_id=4),
+        IE_ForwardingParameters(IE_list=[
+            IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
+            IE_NetworkInstance(network_instance="sgi"),
+            IE_RedirectInformation(redirect_address_type="URL", url="http://example.com"),
+        ])
+    ]),
+    IE_CreateFAR(IE_list=[
+        IE_ApplyAction(FORW=1),
+        IE_FAR_Id(far_id=2),
+        IE_ForwardingParameters(IE_list=[
+            IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
+            IE_NetworkInstance(network_instance="sgi"),
+        ])
+    ]),
+    IE_CreateFAR(IE_list=[
+        IE_ApplyAction(FORW=1),
+        IE_FAR_Id(far_id=3),
+        IE_ForwardingParameters(IE_list=[
+            IE_DestinationInterface(interface="Access"),
+            IE_NetworkInstance(network_instance="access")
+        ])
+    ]),
+    IE_CreateFAR(IE_list=[
+        IE_ApplyAction(FORW=1),
+        IE_FAR_Id(far_id=1),
+        IE_ForwardingParameters(IE_list=[
+            IE_DestinationInterface(interface="Access"),
+            IE_NetworkInstance(network_instance="access")
+        ])
+    ]),
+    IE_CreatePDR(IE_list=[
+        IE_FAR_Id(far_id=4),
+        IE_PDI(IE_list=[
+            IE_NetworkInstance(network_instance="access"),
+            IE_SDF_Filter(
+                FD=1, flow_desc_length=42, flow_desc="permit out ip from 198.19.65.4 to assigned"),
+            IE_SourceInterface(interface="Access"),
+            IE_UE_IP_Address(ipv4="10.192.0.0", V4=1)
+        ]),
+        IE_PDR_Id(pdr_id=4),
+        IE_Precedence(precedence=100),
+        IE_URR_Id(urr_id=2)
+    ]),
+    IE_CreatePDR(IE_list=[
+        IE_FAR_Id(far_id=2),
+        IE_PDI(IE_list=[
+            IE_NetworkInstance(network_instance="access"),
+            IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.2 to assigned"),
+            IE_SourceInterface(interface="Access"),
+            IE_UE_IP_Address(ipv4="10.192.0.0", V4=1)
+        ]),
+        IE_PDR_Id(pdr_id=2),
+        IE_Precedence(precedence=200),
+        IE_URR_Id(urr_id=1)
+    ]),
+    IE_CreatePDR(IE_list=[
+        IE_FAR_Id(far_id=3),
+        IE_PDI(IE_list=[
+            IE_NetworkInstance(network_instance="sgi"),
+            IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.4 to assigned"),
+            IE_SourceInterface(interface="SGi-LAN/N6-LAN"),
+            IE_UE_IP_Address(ipv4="10.192.0.0", SD=1, V4=1)
+        ]),
+        IE_PDR_Id(pdr_id=3),
+        IE_Precedence(precedence=100),
+        IE_URR_Id(urr_id=2)
+    ]),
+    IE_CreatePDR(IE_list=[
+        IE_FAR_Id(far_id=1),
+        IE_PDI(IE_list=[
+            IE_NetworkInstance(network_instance="sgi"),
+            IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.2 to assigned"),
+            IE_SourceInterface(interface="SGi-LAN/N6-LAN"),
+            IE_UE_IP_Address(ipv4="10.192.0.0", SD=1, V4=1)
+        ]),
+        IE_PDR_Id(pdr_id=1),
+        IE_Precedence(precedence=200),
+        IE_URR_Id(urr_id=1)
+    ]),
+    IE_CreateURR(IE_list=[
+        IE_MeasurementMethod(VOLUM=1),
+        IE_ReportingTriggers(),
+        IE_URR_Id(urr_id=2)
+    ]),
+    IE_CreateURR(IE_list=[
+        IE_MeasurementMethod(VOLUM=1),
+        IE_ReportingTriggers(),
+        IE_URR_Id(urr_id=1)
+    ]),
+    IE_FqSEID(ipv4="172.18.1.1", v4=1, seid=0xffde7210d971c146),
+    IE_NodeId(node_id_type="FQDN", node_id="ergw")])
+
+assert bytes(pfcpSEReq2) == pfcpSEReq2Bytes
+assert bytes(PFCP(pfcpSEReq2Bytes)) == pfcpSEReq2Bytes
+
+pfcpSEReq3Bytes = hex_bytes("213203a10000000000000000000003000003001e002c000102006c0004000000060004000d002a000102001600040373676900030037002c000102006c00040000000400040026002a000102001600040373676900260015020012687474703a2f2f6578616d706c652e636f6d0003001e002c000102006c0004000000020004000d002a000102001600040373676900030021002c000102006c00040000000500040010002a000100001600070661636365737300030021002c000102006c00040000000300040010002a000100001600070661636365737300030021002c000102006c00040000000100040010002a000100001600070661636365737300010042006c000400000006000200200018000354535400160007066163636573730014000100005d0005020ac00000003800020006001d00040000009600510004000000030001006d006c0004000000040002004b00160007066163636573730017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3420746f2061737369676e65640014000100005d0005020ac00000003800020004001d00040000006400510004000000020001006d006c0004000000020002004b00160007066163636573730017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3220746f2061737369676e65640014000100005d0005020ac00000003800020002001d0004000000c800510004000000010001003f006c0004000000050002001d0018000354535400160004037367690014000102005d0005060ac00000003800020005001d00040000009600510004000000030001006a006c0004000000030002004800160004037367690017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3420746f2061737369676e65640014000102005d0005060ac00000003800020003001d00040000006400510004000000020001006a006c0004000000010002004800160004037367690017002e0100002a7065726d6974206f75742069702066726f6d203139382e31392e36352e3220746f2061737369676e65640014000102005d0005060ac00000003800020001001d0004000000c8005100040000000100060013003e000102002500020000005100040000000200060013003e000103002500020000005100040000000300060013003e00010200250002000000510004000000010039000d02ffde7211a5ab800aac120101003c0006020465726777")
+
+pfcpSEReq3 = PFCP(seq=3) / \
+  PFCPSessionEstablishmentRequest(IE_list=[
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=6),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
+              IE_NetworkInstance(network_instance="sgi")
+          ])
+      ]),
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=4),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
+              IE_NetworkInstance(network_instance="sgi"),
+              IE_RedirectInformation(redirect_address_type="URL", url="http://example.com")
+          ])
+      ]),
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=2),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
+              IE_NetworkInstance(network_instance="sgi")
+          ])
+      ]),
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=5),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="Access"),
+              IE_NetworkInstance(network_instance="access")
+          ])
+      ]),
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=3),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="Access"),
+              IE_NetworkInstance(network_instance="access")
+          ])
+      ]),
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(FORW=1),
+          IE_FAR_Id(far_id=1),
+          IE_ForwardingParameters(IE_list=[
+              IE_DestinationInterface(interface="Access"),
+              IE_NetworkInstance(network_instance="access")
+          ])
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=6),
+          IE_PDI(IE_list=[
+              IE_ApplicationId(app_id="TST"),
+              IE_NetworkInstance(network_instance="access"),
+              IE_SourceInterface(interface="Access"),
+              IE_UE_IP_Address(ipv4='10.192.0.0', V4=1)
+          ]),
+          IE_PDR_Id(pdr_id=6),
+          IE_Precedence(precedence=150),
+          IE_URR_Id(urr_id=3)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=4),
+          IE_PDI(IE_list=[
+              IE_NetworkInstance(network_instance="access"),
+              IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.4 to assigned"),
+              IE_SourceInterface(interface="Access"),
+              IE_UE_IP_Address(ipv4='10.192.0.0', V4=1)
+          ]),
+          IE_PDR_Id(pdr_id=4),
+          IE_Precedence(precedence=100),
+          IE_URR_Id(urr_id=2)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=2),
+          IE_PDI(IE_list=[
+              IE_NetworkInstance(network_instance="access"),
+              IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.2 to assigned"),
+              IE_SourceInterface(interface="Access"),
+              IE_UE_IP_Address(ipv4='10.192.0.0', V4=1)
+          ]),
+          IE_PDR_Id(pdr_id=2),
+          IE_Precedence(precedence=200),
+          IE_URR_Id(urr_id=1)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=5),
+          IE_PDI(IE_list=[
+              IE_ApplicationId(app_id="TST"),
+              IE_NetworkInstance(network_instance="sgi"),
+              IE_SourceInterface(interface="SGi-LAN/N6-LAN"),
+              IE_UE_IP_Address(ipv4='10.192.0.0', SD=1, V4=1)
+          ]),
+          IE_PDR_Id(pdr_id=5),
+          IE_Precedence(precedence=150),
+          IE_URR_Id(urr_id=3)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=3),
+          IE_PDI(IE_list=[
+              IE_NetworkInstance(network_instance="sgi"),
+              IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.4 to assigned"),
+              IE_SourceInterface(interface="SGi-LAN/N6-LAN"),
+              IE_UE_IP_Address(ipv4='10.192.0.0', SD=1, V4=1)
+          ]),
+          IE_PDR_Id(pdr_id=3),
+          IE_Precedence(precedence=100),
+          IE_URR_Id(urr_id=2)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=1),
+          IE_PDI(IE_list=[
+              IE_NetworkInstance(network_instance="sgi"),
+              IE_SDF_Filter(FD=1, flow_desc="permit out ip from 198.19.65.2 to assigned"),
+              IE_SourceInterface(interface="SGi-LAN/N6-LAN"),
+              IE_UE_IP_Address(ipv4='10.192.0.0', SD=1, V4=1)
+          ]),
+          IE_PDR_Id(pdr_id=1),
+          IE_Precedence(precedence=200),
+          IE_URR_Id(urr_id=1)
+      ]),
+      IE_CreateURR(IE_list=[
+          IE_MeasurementMethod(VOLUM=1),
+          IE_ReportingTriggers(),
+          IE_URR_Id(urr_id=2)
+      ]),
+      IE_CreateURR(IE_list=[
+          IE_MeasurementMethod(VOLUM=1, DURAT=1),
+          IE_ReportingTriggers(),
+          IE_URR_Id(urr_id=3)
+      ]),
+      IE_CreateURR(IE_list=[
+          IE_MeasurementMethod(VOLUM=1),
+          IE_ReportingTriggers(),
+          IE_URR_Id(urr_id=1)
+      ]),
+      IE_FqSEID(ipv4='172.18.1.1', v4=1, seid=0xffde7211a5ab800a),
+      IE_NodeId(node_id_type="FQDN", node_id="ergw")
+  ])
+
+assert bytes(pfcpSEReq3) == pfcpSEReq3Bytes
+assert bytes(PFCP(pfcpSEReq3Bytes)) == pfcpSEReq3Bytes
+
+= Build and dissect PFCP Session Establishment Response
+
+pfcpSERespBytes = hex_bytes("21330022ffde7210bf97810a0000020000130001010039000d02ffde7210bf97810aac120102")
+
+pfcpSEResp = PFCP(version=1, S=1, seq=2, seid=0xffde7210bf97810a) / \
+  PFCPSessionEstablishmentResponse(IE_list=[
+      IE_Cause(cause="Request accepted"),
+      IE_FqSEID(ipv4="172.18.1.2", v4=1, seid=0xffde7210bf97810a),
+  ])
+
+assert bytes(pfcpSEResp) == pfcpSERespBytes
+assert bytes(PFCP(pfcpSERespBytes)) == pfcpSERespBytes
+assert pfcpSEResp.answers(pfcpSEReq1)
+
+= Build and dissect PFCP Heartbeat Request
+
+pfcpHReqBytes = hex_bytes("2001000c0000030000600004e1a47d08")
+
+pfcpHReq = PFCP(version=1, S=0, seq=3) / \
+  PFCPHeartbeatRequest(IE_list=[
+      IE_RecoveryTimeStamp(recovery_time_stamp=3785653512)
+  ])
+
+assert bytes(pfcpHReq) == pfcpHReqBytes
+assert bytes(PFCP(pfcpHReqBytes)) == pfcpHReqBytes
+
+# = Build and dissect PFCP Heartbeat Response
+
+pfcpHRespBytes = hex_bytes("2002000c0000030000600004e1a47af9")
+
+pfcpHResp = PFCP(version=1, S=0, seq=3) / \
+  PFCPHeartbeatResponse(IE_list=[
+      IE_RecoveryTimeStamp(recovery_time_stamp=3785652985)
+  ])
+
+assert bytes(pfcpHResp) == pfcpHRespBytes
+assert bytes(PFCP(pfcpHRespBytes)) == pfcpHRespBytes
+assert pfcpHResp.answers(pfcpHReq)
+
+# = Build and dissect PFCP Session Report Request
+
+pfcpSRReq1Bytes = hex_bytes("21380034ffde7210bf99c00300006b0000270001020050001f00510004000000010068000400000001003f00021000005d0005020ac00001")
+
+pfcpSRReq1 = PFCP(seq=107, version=1, S=1, seid=18437299340760956931) / \
+  PFCPSessionReportRequest(IE_list=[
+      IE_ReportType(USAR=1),
+      IE_UsageReport_SRR(IE_list=[
+          IE_URR_Id(urr_id=1),
+          IE_UR_SEQN(ur_seqn=1),
+          IE_UsageReportTrigger(START=1),
+          IE_UE_IP_Address(ipv4="10.192.0.1", V4=1)
+      ])
+  ])
+
+assert bytes(pfcpSRReq1) == pfcpSRReq1Bytes
+assert bytes(PFCP(pfcpSRReq1Bytes)) == pfcpSRReq1Bytes
+
+pfcpSRReq2Bytes = hex_bytes("2138008a0ffde7210bf940000000310000270001020050007500510004000000030068000400000018003f00020100004b0004e1b44787004c0004e1b447910042001907000000000000000000000000000000000000000000000000004300040000000a8003000a48f9e1b4479137cbd8008004000a48f9e1b4478737cbd8008005000a48f9e1b4479137cbd800")
+
+pfcpSRReq2 = PFCP(seq=49, seid=1152331208797536256) / \
+  PFCPSessionReportRequest(IE_list=[
+      IE_ReportType(USAR=1),
+      IE_UsageReport_SRR(IE_list=[
+          IE_URR_Id(urr_id=3),
+          IE_UR_SEQN(ur_seqn=24),
+          IE_UsageReportTrigger(PERIO=1),
+          IE_StartTime(timestamp=3786688391),
+          IE_EndTime(timestamp=3786688401),
+          IE_VolumeMeasurement(
+              DLVOL=1, ULVOL=1, TOVOL=1, total_volume=0, uplink_volume=0, downlink_volume=0),
+          IE_DurationMeasurement(duration=10),
+          IE_EnterpriseSpecific(
+              ietype=32771,
+              enterprise_id="Travelping GmbH",
+              data=b'\xe1\xb4G\x917\xcb\xd8\x00'),
+              IE_EnterpriseSpecific(
+                  ietype=32772,
+                  enterprise_id="Travelping GmbH",
+                  data=b'\xe1\xb4G\x877\xcb\xd8\x00'),
+                  IE_EnterpriseSpecific(
+                      ietype=32773,
+                      enterprise_id="Travelping GmbH",
+                      data=b'\xe1\xb4G\x917\xcb\xd8\x00')
+          ])
+      ])
+
+assert bytes(pfcpSRReq2) == pfcpSRReq2Bytes
+assert bytes(PFCP(pfcpSRReq2Bytes)) == pfcpSRReq2Bytes
+
+= Build and dissect PFCP Session Report Response
+
+pfcpSRRespBytes = hex_bytes("21390011ffde7210bf99c00300006b000013000101")
+
+pfcpSRResp = PFCP(version=1, S=1, seq=107, seid=0xffde7210bf99c003) / \
+  PFCPSessionReportResponse(IE_list=[
+      IE_Cause(cause="Request accepted")
+  ])
+
+assert bytes(pfcpSRResp) == pfcpSRRespBytes
+assert bytes(PFCP(pfcpSRRespBytes)) == pfcpSRRespBytes
+assert pfcpSRResp.answers(pfcpSRReq1)
+
+# from difflib import unified_diff
+# expected = PFCP(pfcpSRReq2Bytes).show2(dump=True).split("\n")
+# actual = pfcpSRReq2.show2(dump=True).split("\n")
+# for line in unified_diff(expected, actual, fromfile="expected", tofile="actual"):
+#     print(line)
+
+# TODO: i2repr for FAR ID
+
+# print("%r" % pfcpSERBytes)
+# print("%r" % bytes(pfcpSER))
+
+# NOTE: pkt.command() is very useful for adding new test cases
+
+# TODO: load trace (pfcplib, ergw, real captures) and go through it,
+# dissecting and rebuilding packages. Fail if 'raw' data or 'undefined'
+# IEs are found.
+
+# TODO: Application Detection Information IE Type = 68 (decimal)
+# show upf session !!!!
+# show upf flows
+# TODO: look at scs-cnode-log-1.txt for the app references (also check reports)
+# TODO: impl relevant packet types here
+
+# TODO: https://scapy.readthedocs.io/en/latest/extending.html
