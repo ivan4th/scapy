@@ -124,42 +124,42 @@ pfcpSEReq1 = PFCP(version=1, S=1, seq=2, seid=0, spare_oct=0) / \
           IE_ForwardingParameters(IE_list=[
               IE_DestinationInterface(interface="Access"),
               IE_NetworkInstance(network_instance="access"),
-              ])
+          ])
+      ]),
+      IE_CreateFAR(IE_list=[
+          IE_ApplyAction(DROP=1),
+          IE_FAR_Id(far_id=1)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=2),
+          IE_OuterHeaderRemoval(outer_header_removal="GTP-U/UDP/IPv4"),
+          IE_PDI(IE_list=[
+              IE_FqTEID(V4=1, TEID=0x104c9033, ipv4="172.18.1.2"),
+              IE_NetworkInstance(network_instance="cp"),
+              IE_SourceInterface(interface="CP-function"),
           ]),
-          IE_CreateFAR(IE_list=[
-              IE_ApplyAction(DROP=1),
-              IE_FAR_Id(far_id=1)
+          IE_PDR_Id(pdr_id=2),
+          IE_Precedence(precedence=100)
+      ]),
+      IE_CreatePDR(IE_list=[
+          IE_FAR_Id(far_id=1),
+          IE_PDI(IE_list=[
+              IE_NetworkInstance(network_instance="access"),
+              IE_SDF_Filter(FD=1, flow_desc="permit out ip from any to any"),
+              IE_SourceInterface(interface="Access"),
           ]),
-          IE_CreatePDR(IE_list=[
-              IE_FAR_Id(far_id=2),
-              IE_OuterHeaderRemoval(outer_header_removal="GTP-U/UDP/IPv4"),
-              IE_PDI(IE_list=[
-                  IE_FqTEID(V4=1, TEID=0x104c9033, ipv4="172.18.1.2"),
-                  IE_NetworkInstance(network_instance="cp"),
-                  IE_SourceInterface(interface="CP-function"),
-              ]),
-              IE_PDR_Id(pdr_id=2),
-              IE_Precedence(precedence=100)
-          ]),
-          IE_CreatePDR(IE_list=[
-              IE_FAR_Id(far_id=1),
-              IE_PDI(IE_list=[
-                  IE_NetworkInstance(network_instance="access"),
-                  IE_SDF_Filter(FD=1, flow_desc="permit out ip from any to any"),
-                  IE_SourceInterface(interface="Access"),
-              ]),
-              IE_PDR_Id(pdr_id=1),
-              IE_Precedence(precedence=65000),
-              IE_URR_Id(urr_id=1)
-          ]),
-          IE_CreateURR(IE_list=[
-              IE_MeasurementMethod(EVENT=1),
-              IE_ReportingTriggers(START=1),
-              IE_TimeQuota(time_quota=60),
-              IE_URR_Id(urr_id=1)
-          ]),
-        IE_FqSEID(v4=1, seid=0xffde7210bf97810a, ipv4="172.18.1.1"),
-        IE_NodeId(node_id_type="FQDN", node_id="ergw")
+          IE_PDR_Id(pdr_id=1),
+          IE_Precedence(precedence=65000),
+          IE_URR_Id(urr_id=1)
+      ]),
+      IE_CreateURR(IE_list=[
+          IE_MeasurementMethod(EVENT=1),
+          IE_ReportingTriggers(START=1),
+          IE_TimeQuota(time_quota=60),
+          IE_URR_Id(urr_id=1)
+      ]),
+      IE_FqSEID(v4=1, seid=0xffde7210bf97810a, ipv4="172.18.1.1"),
+      IE_NodeId(node_id_type="FQDN", node_id="ergw")
     ])
 
 assert bytes(pfcpSEReq1) == pfcpSEReq1Bytes
@@ -174,7 +174,7 @@ pfcpSEReq2 = PFCP(seq=8) / PFCPSessionEstablishmentRequest(IE_list=[
         IE_ForwardingParameters(IE_list=[
             IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
             IE_NetworkInstance(network_instance="sgi"),
-            IE_RedirectInformation(redirect_address_type="URL", url="http://example.com"),
+            IE_RedirectInformation(redirect_address_type="URL", addr="http://example.com"),
         ])
     ]),
     IE_CreateFAR(IE_list=[
@@ -284,7 +284,7 @@ pfcpSEReq3 = PFCP(seq=3) / \
           IE_ForwardingParameters(IE_list=[
               IE_DestinationInterface(interface="SGi-LAN/N6-LAN"),
               IE_NetworkInstance(network_instance="sgi"),
-              IE_RedirectInformation(redirect_address_type="URL", url="http://example.com")
+              IE_RedirectInformation(redirect_address_type="URL", addr="http://example.com")
           ])
       ]),
       IE_CreateFAR(IE_list=[

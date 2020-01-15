@@ -671,19 +671,8 @@ class IE_RedirectInformation(IE_Base):
         ShortField("length", None),
         BitField("spare", 0, 4),
         BitEnumField("redirect_address_type", "IPv4 address", 4, RedirectAddressType),
-        # FIXME: check if this will work for IPv4 addrs
-        ConditionalField(FieldLenField("ipv4_len", 4, length_of="ipv4"),
-                             lambda pkt: pkt.redirect_address_type == 0),
-        ConditionalField(IPField("ipv4", RandIP()),
-                             lambda pkt: pkt.redirect_address_type == 0),
-        ConditionalField(FieldLenField("ipv6_len", 16, length_of="ipv6"),
-                             lambda pkt: pkt.redirect_address_type == 1),
-        ConditionalField(IP6Field("ipv6", RandIP6()),
-                             lambda pkt: pkt.redirect_address_type == 1),
-        ConditionalField(FieldLenField("url_len", None, length_of="url"),
-                             lambda pkt: pkt.redirect_address_type in (2, 3)),
-        ConditionalField(StrLenField("url", "", length_from=lambda pkt: pkt.url_len),
-                             lambda pkt: pkt.redirect_address_type in (2, 3)),
+        FieldLenField("addr_len", None, length_of="addr"),
+        StrLenField("addr", "", length_from=lambda pkt: pkt.addr_len)
         # TODO: this IE may contain extra data. Spec:
         # "These octet(s) is/are present only if explicitly specified"
     ]
@@ -702,9 +691,11 @@ class IE_ReportType(IE_Base):
 
 class IE_OffendingIE(IE_Base):
     name = "IE Offending IE"
-    fields_desc = [ShortEnumField("ietype", 40, IEType),
-                   ShortField("length", None),
-                   ]
+    fields_desc = [
+        ShortEnumField("ietype", 40, IEType),
+        ShortField("length", None),
+        ShortEnumField("offending_ie_type", None, IEType)
+    ]
 
 class IE_ForwardingPolicy(IE_Base):
     name = "IE Forwarding Policy"
