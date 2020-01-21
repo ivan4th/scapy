@@ -1021,9 +1021,11 @@ class IE_EndTime(IE_Base):
 
 class IE_QueryURR(IE_Base):
     name = "IE Query URR"
-    fields_desc = [ShortEnumField("ietype", 77, IEType),
-                   ShortField("length", None),
-                   ]
+    fields_desc = [
+        ShortEnumField("ietype", 77, IEType),
+        ShortField("length", None),
+        PacketListField("IE_list", [], IE_Dispatcher)
+    ]
 
 class IE_UsageReport_SMR(IE_Base):
     name = "IE Usage Report (Session Modification Response)"
